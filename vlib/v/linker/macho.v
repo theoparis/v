@@ -149,7 +149,9 @@ pub fn (mut m MachOObject) to_bytes() []u8 {
 	text_len := m.text_data.len
 	cstring_off := text_off + text_len
 	cstring_len := m.str_data.len
-	data_off := cstring_off + cstring_len
+	// __data starts on an 8-byte boundary: gen.v places data symbols at that address.
+	data_pad := (8 - (text_len + cstring_len) % 8) % 8
+	data_off := cstring_off + cstring_len + data_pad
 	data_len := m.data_data.len
 
 	reloc_off := data_off + data_len
@@ -175,9 +177,9 @@ pub fn (mut m MachOObject) to_bytes() []u8 {
 		buf << 0
 	}
 	write_u64_le(mut buf, 0)
-	write_u64_le(mut buf, u64(text_len + cstring_len + data_len))
+	write_u64_le(mut buf, u64(text_len + cstring_len + data_pad + data_len))
 	write_u64_le(mut buf, u64(text_off))
-	write_u64_le(mut buf, u64(text_len + cstring_len + data_len))
+	write_u64_le(mut buf, u64(text_len + cstring_len + data_pad + data_len))
 	write_u32_le(mut buf, 7)
 	write_u32_le(mut buf, 7)
 	write_u32_le(mut buf, u32(n_sects))
@@ -214,7 +216,7 @@ pub fn (mut m MachOObject) to_bytes() []u8 {
 	// Section 3: __data
 	write_string_fixed(mut buf, '__data', 16)
 	write_string_fixed(mut buf, '__DATA', 16)
-	write_u64_le(mut buf, u64(text_len + cstring_len)) // Addr = text_len + cstring_len
+	write_u64_le(mut buf, u64(text_len + cstring_len + data_pad)) // Addr = data_off in object space
 	write_u64_le(mut buf, u64(data_len))
 	write_u32_le(mut buf, u32(data_off))
 	write_u32_le(mut buf, 3) // align 8
@@ -235,6 +237,9 @@ pub fn (mut m MachOObject) to_bytes() []u8 {
 
 	buf << m.text_data
 	buf << m.str_data
+	for _ in 0 .. data_pad {
+		buf << 0
+	}
 	buf << m.data_data
 
 	for r in m.relocs {
