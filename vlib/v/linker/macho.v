@@ -135,7 +135,8 @@ pub fn (mut m MachOObject) add_reloc(addr int, sym_idx int, typ int, pcrel bool)
 }
 
 // write supports write handling for MachOObject.
-pub fn (mut m MachOObject) write(path string) {
+// to_bytes serializes the object as a Mach-O MH_OBJECT file image.
+pub fn (mut m MachOObject) to_bytes() []u8 {
 	mut buf := []u8{}
 
 	n_sects := 3
@@ -260,7 +261,13 @@ pub fn (mut m MachOObject) write(path string) {
 
 	buf << m.str_table
 
-	if !write_file_array_raw(path, buf) {
+	return buf
+}
+
+// write writes the Mach-O object to path.
+pub fn (mut m MachOObject) write(path string) {
+	bytes := m.to_bytes()
+	if !write_output_file(path, bytes) {
 		panic('failed to write Mach-O object')
 	}
 }

@@ -3,23 +3,6 @@
 // that can be found in the LICENSE file.
 module linker
 
-import os
-
-// C.open declares the C open symbol used by arm64.
-fn C.open(charptr, int, ...int) int
-
-// C.write declares the C write symbol used by arm64.
-fn C.write(int, voidptr, int) int
-
-// C.close declares the C close symbol used by arm64.
-fn C.close(int) int
-
-// C.chmod declares the C chmod symbol used by arm64.
-fn C.chmod(charptr, int) int
-
-// C.rename declares the C rename symbol used by arm64.
-fn C.rename(charptr, charptr) int
-
 // Mach-O executable constants
 const mh_execute = 2
 const lc_load_dylinker = 0xe
@@ -48,23 +31,6 @@ const cs_hash_size = 32 // SHA256 = 32 bytes
 const cs_page_size_arm64 = 16384 // Code signing page size for ARM64 macOS
 
 const cs_page_shift_arm64 = 14 // log2(16384)
-
-// The output file is created through the C library's open(), and the create and
-// truncate bits are laid out differently per platform: the BSD family (and so
-// macOS, the only target this linker was built for) uses 0x200/0x400, Linux
-// 0x40/0x200 and MSVCRT 0x100/0x200. One constant only ever suits one of them;
-// the others silently fail to create the file. MSVCRT also needs binary mode
-// to preserve instruction bytes, including bytes equal to a newline.
-const o_wronly_creat_trunc = $if windows {
-	0x8301
-} $else $if linux {
-	0x241
-} $else {
-	0x601
-}
-
-// MSVCRT accepts read/write permission bits, without POSIX executable bits.
-const output_file_permissions = $if windows { 0o600 } $else { 0o755 }
 
 // ARM64 page size on macOS
 const page_size = 0x4000 // 16KB
@@ -265,8 +231,9 @@ pub fn Linker.new(macho &MachOObject) &Linker {
 	}
 }
 
-// link supports link handling for Linker.
-pub fn (mut l Linker) link(output_path string, entry_name string) {
+// link_bytes builds the linked executable image in memory. output_path only names
+// the code-signature identifier; nothing is written to disk here.
+pub fn (mut l Linker) link_bytes(output_path string, entry_name string) []u8 {
 	// Pre-allocate buffer with estimated size to avoid reallocations
 	estimated_size := l.macho.text_data.len + l.macho.str_data.len + l.macho.data_data.len + 0x10000
 	l.buf = []u8{cap: estimated_size}
@@ -577,46 +544,13 @@ pub fn (mut l Linker) link(output_path string, entry_name string) {
 		write_u32_le_at(mut l.buf, codesig_cmd_start + 12, u32(actual_cs_size))
 	}
 
-	tmp_output_path := '${output_path}.tmp.${os.getpid()}'
-	if !write_file_array_raw(tmp_output_path, l.buf) {
-		panic('failed to write output file')
-	}
-	if C.chmod(&char(tmp_output_path.str), output_file_permissions) != 0 {
-		panic('failed to chmod output file')
-	}
-	if !replace_output_file(tmp_output_path, output_path) {
-		panic('failed to rename output file')
-	}
+	return l.buf
 }
 
-// replace_output_file publishes the completed output using the host rename semantics.
-fn replace_output_file(tmp_output_path string, output_path string) bool {
-	if C.rename(&char(tmp_output_path.str), &char(output_path.str)) == 0 {
-		return true
-	}
-	$if windows {
-		// MSVCRT rename cannot replace an existing destination. POSIX rename
-		// already can, so its failure must preserve the previous output.
-		C.remove(&char(output_path.str))
-		return C.rename(&char(tmp_output_path.str), &char(output_path.str)) == 0
-	}
-	return false
-}
-
-// write_file_array_raw writes file array raw output for arm64.
-fn write_file_array_raw(path string, data []u8) bool {
-	fd := C.open(&char(path.str), o_wronly_creat_trunc, output_file_permissions)
-	if fd < 0 {
-		return false
-	}
-	if data.len > 0 {
-		written := C.write(fd, data.data, data.len)
-		if written != data.len {
-			C.close(fd)
-			return false
-		}
-	}
-	return C.close(fd) == 0
+// link writes the linked executable to output_path, replacing it atomically.
+pub fn (mut l Linker) link(output_path string, entry_name string) {
+	bytes := l.link_bytes(output_path, entry_name)
+	write_executable(output_path, bytes)
 }
 
 // write_header writes header output for arm64.

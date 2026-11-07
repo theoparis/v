@@ -383,3 +383,13 @@ fn test_f32_comparison_stays_single_precision() {
 	assert asm_fcmp_s(Reg(0), Reg(1)) in words
 	assert asm_fcmp_d(Reg(0), Reg(1)) !in words
 }
+
+fn test_native_output_writer_preserves_binary_bytes() {
+	path := os.join_path(os.vtmp_dir(), 'arm64-binary-writer-${os.getpid()}.o')
+	defer {
+		os.rm(path) or {}
+	}
+	bytes := [u8(0xCF), 0xFA, 0xED, 0xFE, 0, 10, 13, 26, 255]
+	assert linker.write_output_file(path, bytes)
+	assert os.read_bytes(path)! == bytes
+}

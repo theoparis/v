@@ -1,7 +1,5 @@
 module linker
 
-import os
-
 // ELF64 constants for AArch64 relocatable objects.
 pub const ei_mag0 = 0x7f
 pub const ei_mag1 = 0x45
@@ -37,9 +35,9 @@ pub const r_aarch64_add_abs_lo12_nc = 277
 pub const r_aarch64_adr_got_page = 311
 pub const r_aarch64_ld64_got_lo12_nc = 312
 
-// write_elf serializes the already-generated Mach-O object data as an ELF64
+// elf_bytes serializes the already-generated Mach-O object data as an ELF64
 // relocatable object, so the ARM64 backend can target Linux/AArch64.
-pub fn (mut m MachOObject) write_elf(path string) ! {
+pub fn (mut m MachOObject) elf_bytes() ![]u8 {
 	mut buf := []u8{}
 	mut shstr := [u8(0)]
 
@@ -447,7 +445,15 @@ pub fn (mut m MachOObject) write_elf(path string) ! {
 	write_u64_le(mut buf, 1)
 	write_u64_le(mut buf, 0)
 
-	os.write_file_array(path, buf)!
+	return buf
+}
+
+// write_elf writes the ELF64 relocatable object to path.
+pub fn (mut m MachOObject) write_elf(path string) ! {
+	bytes := m.elf_bytes()!
+	if !write_output_file(path, bytes) {
+		return error('failed to write ELF object: ${path}')
+	}
 }
 
 fn write_i64_le(mut b []u8, v i64) {
