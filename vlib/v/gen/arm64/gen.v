@@ -3081,3 +3081,12 @@ fn parse_arm64_int(s string) i64 {
 pub fn (mut g Gen) write_elf(path string) ! {
 	g.macho.write_elf(path)!
 }
+
+// write_macho_object writes the generated ARM64 code as a Mach-O MH_OBJECT file,
+// for linking with the mini ld64 in vlib/v/linker.
+pub fn (mut g Gen) write_macho_object(path string) ! {
+	bytes := g.macho.to_bytes()
+	if !linker.write_output_file(path, bytes) {
+		return error('failed to write Mach-O object: ${path}')
+	}
+}

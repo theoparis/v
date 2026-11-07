@@ -10704,9 +10704,9 @@ pub fn run(args []string) {
 		no_cache = true
 	}
 	should_run = should_run && !skip_running
-	native_linux_object := backend == 'arm64' && target_os == 'linux' && explicit_output
-		&& output_file.ends_with('.o')
-	if is_o && !native_linux_object && (backend !in ['c', 'fastc'] || !explicit_output
+	native_arm64_object := backend == 'arm64' && pref.normalized_os(target_os) in ['linux', 'macos']
+		&& explicit_output && output_file.ends_with('.o')
+	if is_o && !native_arm64_object && (backend !in ['c', 'fastc'] || !explicit_output
 		|| (!output_file.ends_with('.c') && !output_file.ends_with('.o'))) {
 		eprintln('option `-is_o` requires the C backend and an explicit `.c` or `.o` output file')
 		exit(1)
@@ -14823,6 +14823,11 @@ pub fn run(args []string) {
 					exit(1)
 				}
 				g.write_elf(bin_file) or {
+					eprintln(err.msg())
+					exit(1)
+				}
+			} else if is_o {
+				g.write_macho_object(bin_file) or {
 					eprintln(err.msg())
 					exit(1)
 				}
