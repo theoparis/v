@@ -1,12 +1,13 @@
 module arm64
 
+import v.linker
 import v.ssa
 
 // collected_words reads the text emitted so far back as little-endian words.
 fn collected_words(g &Gen) []u32 {
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	return words
 }

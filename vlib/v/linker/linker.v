@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alexander Medvednikov. All rights reserved.
 // Use of this source code is governed by an MIT license
 // that can be found in the LICENSE file.
-module arm64
+module linker
 
 import os
 
@@ -1363,7 +1363,7 @@ fn (mut l Linker) write_stubs() {
 }
 
 // read_u32_le reads read u32 le input for arm64.
-fn read_u32_le(data []u8, off int) u32 {
+pub fn read_u32_le(data []u8, off int) u32 {
 	b0 := u32(data[off]) & u32(0xff)
 	b1 := (u32(data[off + 1]) & u32(0xff)) << 8
 	b2 := (u32(data[off + 2]) & u32(0xff)) << 16

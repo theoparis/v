@@ -109,7 +109,7 @@ fn test_native_compiler_string_array_constants_reserve_full_headers_and_preserve
 		builder := os.read_file(os.join_path(@VMODROOT, 'vlib', 'v', 'ssa', 'builder.v')) or {
 			panic(err)
 		}
-		linker := os.read_file(os.join_path(@VMODROOT, 'vlib', 'v', 'gen', 'arm64', 'linker.v')) or {
+		linker := os.read_file(os.join_path(@VMODROOT, 'vlib', 'v', 'linker', 'linker.v')) or {
 			panic(err)
 		}
 		bench_names := builder.all_after('const bench_runtime_stub_names =').all_before('// Builder stores')

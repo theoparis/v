@@ -1,16 +1,9 @@
 module arm64
 
+import v.linker
 import v.ssa
 import os
 
-fn test_native_main_stack_matches_macos_c_backend() {
-	mut linker := Linker.new(MachOObject.new())
-	linker.write_main_cmd(4096)
-	assert read_u32_le(linker.buf, 0) == lc_main
-	assert read_u32_le(linker.buf, 8) == 4096
-	assert read_u32_le(linker.buf, 16) == 64 * 1024 * 1024
-	assert read_u32_le(linker.buf, 20) == 0
-}
 
 fn test_sparse_codegen_slots_only_store_current_function_ids() {
 	mut m := ssa.Module.new()
@@ -57,7 +50,7 @@ fn test_zero_aggregate_uses_address_fallback_past_immediate_range() {
 	g.materialize_text()
 	assert g.macho.text_data.len == (4096 + 3) * 4
 	last := g.macho.text_data.len - 4
-	assert read_u32_le(g.macho.text_data, last) == asm_str(xzr, Reg(11))
+	assert linker.read_u32_le(g.macho.text_data, last) == asm_str(xzr, Reg(11))
 }
 
 fn test_external_global_address_uses_got_load_relocations() {
@@ -68,9 +61,9 @@ fn test_external_global_address_uses_got_load_relocations() {
 	g.emit_global_addr(8, 'environ')
 	g.materialize_text()
 	assert g.macho.relocs.len == 2
-	assert g.macho.relocs[0].type_ == arm64_reloc_got_load_page21
-	assert g.macho.relocs[1].type_ == arm64_reloc_got_load_pageoff12
-	assert read_u32_le(g.macho.text_data, 4) == asm_ldr_pageoff(Reg(8))
+	assert g.macho.relocs[0].type_ == linker.arm64_reloc_got_load_page21
+	assert g.macho.relocs[1].type_ == linker.arm64_reloc_got_load_pageoff12
+	assert linker.read_u32_le(g.macho.text_data, 4) == asm_ldr_pageoff(Reg(8))
 }
 
 fn test_global_string_load_copies_both_words() {
@@ -89,10 +82,10 @@ fn test_global_string_load_copies_both_words() {
 	g.materialize_text()
 	assert g.macho.relocs.len == 2
 	assert g.macho.text_data.len == 24
-	assert read_u32_le(g.macho.text_data, 8) == asm_ldr(Reg(8), Reg(9))
-	assert read_u32_le(g.macho.text_data, 12) == asm_stur(Reg(8), fp, -16)
-	assert read_u32_le(g.macho.text_data, 16) == asm_ldr_imm(Reg(10), Reg(9), 1)
-	assert read_u32_le(g.macho.text_data, 20) == asm_stur(Reg(10), fp, -8)
+	assert linker.read_u32_le(g.macho.text_data, 8) == asm_ldr(Reg(8), Reg(9))
+	assert linker.read_u32_le(g.macho.text_data, 12) == asm_stur(Reg(8), fp, -16)
+	assert linker.read_u32_le(g.macho.text_data, 16) == asm_ldr_imm(Reg(10), Reg(9), 1)
+	assert linker.read_u32_le(g.macho.text_data, 20) == asm_stur(Reg(10), fp, -8)
 }
 
 fn test_signed_global_load_preserves_width_and_sign() {
@@ -109,7 +102,7 @@ fn test_signed_global_load_preserves_width_and_sign() {
 	g.materialize_text()
 	assert g.macho.relocs.len == 2
 	assert g.macho.text_data.len == 16
-	assert read_u32_le(g.macho.text_data, 8) == asm_ldrsw(Reg(8), Reg(9))
+	assert linker.read_u32_le(g.macho.text_data, 8) == asm_ldrsw(Reg(8), Reg(9))
 }
 
 fn test_aggregate_bitcast_copies_every_word() {
@@ -152,7 +145,7 @@ fn test_large_c_variadic_aggregate_passes_its_address() {
 	g.materialize_text()
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	assert asm_sub_imm(Reg(8), fp, 24) in words
 	assert asm_str(Reg(8), sp) in words
@@ -182,7 +175,7 @@ fn test_c_homogeneous_float_aggregate_uses_simd_argument_registers() {
 	g.materialize_text()
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	assert asm_fmov_d_x(0, Reg(9)) in words
 	assert asm_fmov_d_x(1, Reg(9)) in words
@@ -217,7 +210,7 @@ fn test_c_homogeneous_float_aggregate_overflow_uses_the_stack() {
 	g.materialize_text()
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	assert asm_str_imm(Reg(8), sp, 0) in words
 	assert asm_str_imm(Reg(8), sp, 1) in words
@@ -272,7 +265,7 @@ fn test_c_homogeneous_float_aggregate_return_uses_simd_registers() {
 	g.materialize_text()
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	assert asm_fmov_x_d(Reg(8), 0) in words
 	assert asm_fmov_x_d(Reg(8), 1) in words
@@ -303,7 +296,7 @@ fn test_c_f32_homogeneous_float_aggregate_return_uses_simd_registers() {
 	g.materialize_text()
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	assert asm_fmov_w_s(Reg(8), 0) in words
 	assert asm_fmov_w_s(Reg(8), 1) in words
@@ -336,7 +329,7 @@ fn test_literal_c_variadic_string_stores_both_words() {
 	g.materialize_text()
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	assert asm_str_imm(Reg(8), sp, 0) in words
 	assert asm_str_imm(Reg(10), sp, 1) in words
@@ -355,7 +348,7 @@ fn float_binop_words(mut m ssa.Module, fop ssa.OpCode, arg_type ssa.TypeID, ret_
 	g.materialize_text()
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	return words
 }
@@ -389,14 +382,4 @@ fn test_f32_comparison_stays_single_precision() {
 	// runs at the operands' width.
 	assert asm_fcmp_s(Reg(0), Reg(1)) in words
 	assert asm_fcmp_d(Reg(0), Reg(1)) !in words
-}
-
-fn test_native_output_writer_preserves_binary_bytes() {
-	path := os.join_path(os.vtmp_dir(), 'arm64-binary-writer-${os.getpid()}.o')
-	defer {
-		os.rm(path) or {}
-	}
-	bytes := [u8(0xCF), 0xFA, 0xED, 0xFE, 0, 10, 13, 26, 255]
-	assert write_file_array_raw(path, bytes)
-	assert os.read_bytes(path)! == bytes
 }

@@ -1,5 +1,6 @@
 module arm64
 
+import v.linker
 import v.ssa
 
 // A four-lane f32 value in SSA shape: a struct whose only field is a fixed
@@ -34,7 +35,7 @@ fn simd_call_words(mut m ssa.Module, callee string, operands []ssa.ValueID, ret_
 	g.materialize_text()
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	return words
 }
@@ -162,7 +163,7 @@ fn math_call_words(mut m ssa.Module, callee string, arg_type ssa.TypeID, ret_typ
 	g.materialize_text()
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	return words
 }

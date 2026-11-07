@@ -1,5 +1,6 @@
 module arm64
 
+import v.linker
 import v.ssa
 
 fn test_extract_function_returns_bytes_between_symbols() {
@@ -29,7 +30,7 @@ fn test_extract_function_rejects_function_with_relocations() {
 	g.macho.add_symbol('_bar', 4, false, 1)
 	sym_idx := g.macho.add_undefined('_println')
 	// Simulate a call inside `foo` needing a branch26 fixup.
-	g.macho.add_reloc(0, sym_idx, arm64_reloc_branch26, true)
+	g.macho.add_reloc(0, sym_idx, linker.arm64_reloc_branch26, true)
 	code := g.extract_function('foo')
 	assert code.len == 0
 }

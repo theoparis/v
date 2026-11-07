@@ -1,13 +1,14 @@
 module arm64
 
 import encoding.binary
+import v.linker
 import v.ssa
 
 // Gen stores state for ARM64 code generation.
 pub struct Gen {
 mut:
-	m                    &ssa.Module  = unsafe { nil }
-	macho                &MachOObject = unsafe { nil }
+	m                    &ssa.Module         = unsafe { nil }
+	macho                &linker.MachOObject = unsafe { nil }
 	text_words           []u32
 	stack_offsets        []i32
 	alloca_offsets       []i32
@@ -65,7 +66,7 @@ pub fn Gen.new(m &ssa.Module) &Gen {
 fn new_gen_with_text_capacity(m &ssa.Module, text_capacity int) &Gen {
 	return &Gen{
 		m:                    m
-		macho:                MachOObject.new()
+		macho:                linker.MachOObject.new()
 		text_words:           []u32{cap: text_capacity}
 		stack_offsets:        []i32{}
 		alloca_offsets:       []i32{}
@@ -216,7 +217,7 @@ fn (mut g Gen) materialize_text() {
 
 // write_and_link writes and link output for arm64.
 pub fn (mut g Gen) write_and_link(output string) {
-	mut l := Linker.new(g.macho)
+	mut l := linker.Linker.new(g.macho)
 	l.freestanding = g.freestanding
 	l.link(output, '_main')
 }
@@ -1870,7 +1871,7 @@ fn (mut g Gen) gen_call(val_id int, instr ssa.Instruction) {
 		g.emit32(asm_bl(i32(offset)))
 	} else {
 		sym_idx := g.macho.add_undefined('_' + fn_name)
-		g.macho.add_reloc(g.text_offset(), sym_idx, arm64_reloc_branch26, true)
+		g.macho.add_reloc(g.text_offset(), sym_idx, linker.arm64_reloc_branch26, true)
 		g.emit32(asm_bl(0))
 	}
 
@@ -2246,9 +2247,9 @@ fn (mut g Gen) materialize_string(val_id int, reg int) {
 	str_sym_idx := g.macho.add_symbol(str_sym_name, u64(str_offset), false, 2)
 
 	// ADRP + ADD to load address
-	g.macho.add_reloc(g.text_offset(), str_sym_idx, arm64_reloc_page21, true)
+	g.macho.add_reloc(g.text_offset(), str_sym_idx, linker.arm64_reloc_page21, true)
 	g.emit32(asm_adrp(Reg(reg)))
-	g.macho.add_reloc(g.text_offset(), str_sym_idx, arm64_reloc_pageoff12, false)
+	g.macho.add_reloc(g.text_offset(), str_sym_idx, linker.arm64_reloc_pageoff12, false)
 	g.emit32(asm_add_pageoff(Reg(reg)))
 
 	// x10 holds the string struct's second 8-byte word: `len` in the low 32 bits and
@@ -2272,15 +2273,15 @@ fn (mut g Gen) emit_global_addr(reg int, name string) {
 		sym_idx = g.macho.add_undefined(sym_name)
 	}
 	if g.is_external_global(name) {
-		g.macho.add_reloc(g.text_offset(), sym_idx, arm64_reloc_got_load_page21, true)
+		g.macho.add_reloc(g.text_offset(), sym_idx, linker.arm64_reloc_got_load_page21, true)
 		g.emit32(asm_adrp(Reg(reg)))
-		g.macho.add_reloc(g.text_offset(), sym_idx, arm64_reloc_got_load_pageoff12, false)
+		g.macho.add_reloc(g.text_offset(), sym_idx, linker.arm64_reloc_got_load_pageoff12, false)
 		g.emit32(asm_ldr_pageoff(Reg(reg)))
 		return
 	}
-	g.macho.add_reloc(g.text_offset(), sym_idx, arm64_reloc_page21, true)
+	g.macho.add_reloc(g.text_offset(), sym_idx, linker.arm64_reloc_page21, true)
 	g.emit32(asm_adrp(Reg(reg)))
-	g.macho.add_reloc(g.text_offset(), sym_idx, arm64_reloc_pageoff12, false)
+	g.macho.add_reloc(g.text_offset(), sym_idx, linker.arm64_reloc_pageoff12, false)
 	g.emit32(asm_add_pageoff(Reg(reg)))
 }
 
@@ -3074,4 +3075,9 @@ fn parse_arm64_int(s string) i64 {
 	}
 	wrapped := i64(n)
 	return if neg { -wrapped } else { wrapped }
+}
+
+// write_elf writes the generated ARM64 code as an experimental Linux object.
+pub fn (mut g Gen) write_elf(path string) ! {
+	g.macho.write_elf(path)!
 }

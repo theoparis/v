@@ -1,4 +1,4 @@
-module arm64
+module linker
 
 import os
 
@@ -58,4 +58,14 @@ fn test_failed_posix_rename_preserves_the_existing_output() {
 	os.write_file(output, 'previous output')!
 	assert !replace_output_file(missing, output)
 	assert os.read_file(output)! == 'previous output'
+}
+
+fn test_native_output_writer_preserves_binary_bytes() {
+	path := os.join_path(os.vtmp_dir(), 'arm64-binary-writer-${os.getpid()}.o')
+	defer {
+		os.rm(path) or {}
+	}
+	bytes := [u8(0xCF), 0xFA, 0xED, 0xFE, 0, 10, 13, 26, 255]
+	assert write_file_array_raw(path, bytes)
+	assert os.read_bytes(path)! == bytes
 }

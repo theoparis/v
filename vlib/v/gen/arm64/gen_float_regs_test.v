@@ -1,5 +1,6 @@
 module arm64
 
+import v.linker
 import v.ssa
 
 // The words below are counted, not just searched: the tests assert how long the
@@ -54,7 +55,7 @@ fn float_instr_words(mut m ssa.Module, fop ssa.OpCode, width int, same_operand b
 fn collected_float_words(g &Gen) []u32 {
 	mut words := []u32{}
 	for i := 0; i < g.macho.text_data.len; i += 4 {
-		words << read_u32_le(g.macho.text_data, i)
+		words << linker.read_u32_le(g.macho.text_data, i)
 	}
 	return words
 }

@@ -2,21 +2,21 @@
 // Use of this source code is governed by an MIT license
 // that can be found in the LICENSE file.
 
-module arm64
+module linker
 
 // Mach-O Constants for ARM64
-const mh_magic_64 = u32(0xfeedfacf)
-const cpu_type_arm64 = 0x0100000c
-const cpu_subtype_arm64_all = 0
+pub const mh_magic_64 = u32(0xfeedfacf)
+pub const cpu_type_arm64 = 0x0100000c
+pub const cpu_subtype_arm64_all = 0
 
-const lc_segment_64 = 0x19
-const lc_symtab = 0x2
+pub const lc_segment_64 = 0x19
+pub const lc_symtab = 0x2
 
-const arm64_reloc_branch26 = 2
-const arm64_reloc_page21 = 3
-const arm64_reloc_pageoff12 = 4
-const arm64_reloc_got_load_page21 = 5
-const arm64_reloc_got_load_pageoff12 = 6
+pub const arm64_reloc_branch26 = 2
+pub const arm64_reloc_page21 = 3
+pub const arm64_reloc_pageoff12 = 4
+pub const arm64_reloc_got_load_page21 = 5
+pub const arm64_reloc_got_load_pageoff12 = 6
 
 // MachOObject represents mach oobject data used by arm64.
 pub struct MachOObject {
@@ -32,7 +32,8 @@ pub mut:
 }
 
 // RelocationInfo stores relocation info metadata used by arm64.
-struct RelocationInfo {
+pub struct RelocationInfo {
+pub:
 	addr    int
 	sym_idx int
 	pcrel   bool
@@ -42,8 +43,8 @@ struct RelocationInfo {
 }
 
 // Symbol represents symbol data used by arm64.
-struct Symbol {
-mut:
+pub struct Symbol {
+pub mut:
 	name     string
 	type_    u8
 	sect     u8

@@ -1,41 +1,41 @@
-module arm64
+module linker
 
 import os
 
 // ELF64 constants for AArch64 relocatable objects.
-const ei_mag0 = 0x7f
-const ei_mag1 = 0x45
-const ei_mag2 = 0x4c
-const ei_mag3 = 0x46
+pub const ei_mag0 = 0x7f
+pub const ei_mag1 = 0x45
+pub const ei_mag2 = 0x4c
+pub const ei_mag3 = 0x46
 
-const elfclass64 = 2
-const elfdata2lsb = 1
-const ev_current = 1
-const et_rel = 1
-const em_aarch64 = 183
+pub const elfclass64 = 2
+pub const elfdata2lsb = 1
+pub const ev_current = 1
+pub const et_rel = 1
+pub const em_aarch64 = 183
 
-const sht_null = 0
-const sht_progbits = 1
-const sht_symtab = 2
-const sht_strtab = 3
-const sht_rela = 4
+pub const sht_null = 0
+pub const sht_progbits = 1
+pub const sht_symtab = 2
+pub const sht_strtab = 3
+pub const sht_rela = 4
 
-const shf_write = 0x1
-const shf_alloc = 0x2
-const shf_execinstr = 0x4
+pub const shf_write = 0x1
+pub const shf_alloc = 0x2
+pub const shf_execinstr = 0x4
 
-const stb_local = 0
-const stb_global = 1
-const stt_notype = 0
-const stt_object = 1
-const stt_func = 2
+pub const stb_local = 0
+pub const stb_global = 1
+pub const stt_notype = 0
+pub const stt_object = 1
+pub const stt_func = 2
 
 // AArch64 relocation types used by the Mach-O backend.
-const r_aarch64_call26 = 283
-const r_aarch64_adr_prel_pg_hi21 = 275
-const r_aarch64_add_abs_lo12_nc = 277
-const r_aarch64_adr_got_page = 311
-const r_aarch64_ld64_got_lo12_nc = 312
+pub const r_aarch64_call26 = 283
+pub const r_aarch64_adr_prel_pg_hi21 = 275
+pub const r_aarch64_add_abs_lo12_nc = 277
+pub const r_aarch64_adr_got_page = 311
+pub const r_aarch64_ld64_got_lo12_nc = 312
 
 // write_elf serializes the already-generated Mach-O object data as an ELF64
 // relocatable object, so the ARM64 backend can target Linux/AArch64.
@@ -453,9 +453,4 @@ pub fn (mut m MachOObject) write_elf(path string) ! {
 fn write_i64_le(mut b []u8, v i64) {
 	u := u64(v)
 	write_u64_le(mut b, u)
-}
-
-// write_elf writes the generated ARM64 code as an experimental Linux object.
-pub fn (mut g Gen) write_elf(path string) ! {
-	g.macho.write_elf(path)!
 }
