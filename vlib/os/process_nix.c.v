@@ -282,7 +282,7 @@ fn (mut p Process) unix_is_alive() bool {
 }
 
 fn (mut p Process) impl_check_pid_status(exit_early_on_ret0 bool, waitpid_options int) bool {
-	mut cstatus := 0
+	mut cstatus := i32(0)
 	mut ret := -1
 	$if !emscripten ? {
 		ret = C.waitpid(p.pid, &cstatus, waitpid_options)
