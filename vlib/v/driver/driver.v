@@ -2886,6 +2886,9 @@ fn default_bin_file_for_input(input_file string) string {
 		base = safe_default_bin_file_name(filename)
 	}
 	input_dir := os.dir(resolved_input)
+	if os.is_dir(os.join_path_single(input_dir, base)) {
+		base = safe_default_bin_file_name(filename)
+	}
 	return if input_dir in ['', '.'] { base } else { os.join_path_single(input_dir, base) }
 }
 

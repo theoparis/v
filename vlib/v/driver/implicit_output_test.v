@@ -69,6 +69,19 @@ fn test_default_output_for_non_v_suffixes_is_distinct_from_source() {
 	}
 }
 
+fn test_run_script_does_not_publish_over_existing_directory() {
+	root := implicit_output_test_root()!
+	defer { os.rmdir_all(root) or { panic(err) } }
+	source := os.join_path(root, 'build.vsh')
+	build_dir := os.join_path(root, 'build')
+	os.mkdir(build_dir)!
+	os.write_file(source, implicit_output_source)!
+	result := implicit_output_compile(['run', source])
+	assert result.exit_code == 37, result.output
+	assert result.output.contains('IMPLICIT_OUTPUT_RAN')
+	assert os.is_dir(build_dir)
+}
+
 fn test_default_output_resolves_extensionless_sources_and_symlinks_safely() {
 	root := implicit_output_test_root()!
 	defer {
